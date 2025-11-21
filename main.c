@@ -15,6 +15,8 @@ float g_mouse_last_x = 0.0f;
 float g_mouse_last_y = 0.0f;
 int g_is_dragging = 0; 
 
+float g_zoom_factor = 1.0f; 
+
 static void normalize(float v[3]) {
     float len = (float)sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
     if (len != 0.0f) {
@@ -79,7 +81,7 @@ void mouse_click(int button, int state, int x, int y) {
             g_is_dragging = 0;
             glutPostRedisplay();
         }
-    }
+    } 
 }
 
 void mouse_motion(int x, int y) {
@@ -108,6 +110,20 @@ void mouse_motion(int x, int y) {
         g_quat_increment[2] = axis[2] * sin_a;
         g_quat_increment[3] = (float)cos(angle / 2.0f);
         
+        glutPostRedisplay();
+    }
+}
+
+void keyboard(unsigned char key, int x, int y) {
+    float zoom_step = 0.1f; 
+
+    if (key == 'i' || key == 'I') {
+        g_zoom_factor -= zoom_step;
+        if (g_zoom_factor < 0.2f) g_zoom_factor = 0.2f; // Limite mínimo
+        glutPostRedisplay();
+    } else if (key == 'o' || key == 'O') {
+        g_zoom_factor += zoom_step;
+        if (g_zoom_factor > 10.0f) g_zoom_factor = 10.0f; // Limite máximo
         glutPostRedisplay();
     }
 }
@@ -148,14 +164,13 @@ void display() {
 
     glMatrixMode(GL_PROJECTION); 
     glLoadIdentity();
-    // Near Clip ajustado para 0.001
-    gluPerspective(60.0, (double)win_width / (double)win_height, 1, 1000.0);
+    gluPerspective(60.0, (double)win_width / (double)win_height, 0.001, 1000.0);
 
     glMatrixMode(GL_MODELVIEW); 
     glLoadIdentity();
     
     gluLookAt(
-        1.5, 1.5, 1.5, 
+        1.0 * g_zoom_factor, 1.0 * g_zoom_factor, 1.0 * g_zoom_factor, 
         0.0, 0.0, 0.0, 
         0.0, 1.0, 0.0
     ); 
@@ -169,7 +184,7 @@ void display() {
     
     glMultMatrixf(rotation_matrix);
 
-    glScalef(1.0f, 1.0f, 1.0f); 
+    glScalef(1.05f,1.05f, 1.05f); 
 
     if (g_mesh && g_mesh->interleaved_data) {
         int data_per_vertex = 8; 
@@ -217,6 +232,7 @@ int main(int argc, char** argv) {
 
     glutMouseFunc(mouse_click);
     glutMotionFunc(mouse_motion);
+    glutKeyboardFunc(keyboard);
 
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
