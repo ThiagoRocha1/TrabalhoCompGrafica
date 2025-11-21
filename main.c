@@ -119,11 +119,11 @@ void keyboard(unsigned char key, int x, int y) {
 
     if (key == 'i' || key == 'I') {
         g_zoom_factor -= zoom_step;
-        if (g_zoom_factor < 0.2f) g_zoom_factor = 0.2f; // Limite mínimo
+        if (g_zoom_factor < 0.2f) g_zoom_factor = 0.2f;
         glutPostRedisplay();
     } else if (key == 'o' || key == 'O') {
         g_zoom_factor += zoom_step;
-        if (g_zoom_factor > 10.0f) g_zoom_factor = 10.0f; // Limite máximo
+        if (g_zoom_factor > 10.0f) g_zoom_factor = 10.0f;
         glutPostRedisplay();
     }
 }
