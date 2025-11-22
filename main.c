@@ -15,7 +15,9 @@ float g_mouse_last_x = 0.0f;
 float g_mouse_last_y = 0.0f;
 int g_is_dragging = 0; 
 
-float g_zoom_factor = 1.0f; 
+float g_zoom_factor = 1.0f;
+
+char g_filename[1024];
 
 static void normalize(float v[3]) {
     float len = (float)sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
@@ -169,8 +171,16 @@ void display() {
     glMatrixMode(GL_MODELVIEW); 
     glLoadIdentity();
     
+    float z_pos = 1.0;
+    float x_pos = 1.0;
+
+    if (strcmp(g_filename, "bunny.obj") == 0) {
+        z_pos = 2.5;
+        x_pos = -0.7;
+    }
+
     gluLookAt(
-        1.0 * g_zoom_factor, 1.0 * g_zoom_factor, 1.0 * g_zoom_factor, 
+        x_pos * g_zoom_factor, 1.0 * g_zoom_factor, z_pos * g_zoom_factor, 
         0.0, 0.0, 0.0, 
         0.0, 1.0, 0.0
     ); 
@@ -184,7 +194,13 @@ void display() {
     
     glMultMatrixf(rotation_matrix);
 
-    glScalef(1.05f,1.05f, 1.05f); 
+    float scale_factor = 1.05f;
+
+    if (strcmp(g_filename, "bunny.obj") == 0) {
+        scale_factor = 0.50f;
+    }
+    
+    glScalef(scale_factor,scale_factor, scale_factor); 
 
     if (g_mesh && g_mesh->interleaved_data) {
         int data_per_vertex = 8; 
@@ -219,6 +235,9 @@ int main(int argc, char** argv) {
     }
     
     const char* filename = argv[1]; 
+
+    strncpy(g_filename, filename, sizeof(g_filename) - 1);
+    g_filename[sizeof(g_filename) - 1] = '\0';
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
