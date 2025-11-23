@@ -231,15 +231,16 @@ void display() {
     
     glScalef(scale_factor,scale_factor, scale_factor); 
     
-    if (g_texture_id != 0) {
+    int use_texture = (g_texture_id != 0) && (g_mesh->has_texcoords);
+    
+    if (use_texture) {
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, g_texture_id);
         glDisable(GL_COLOR_MATERIAL); 
         glColor3f(1.0f, 1.0f, 1.0f);
     } else {
         glDisable(GL_TEXTURE_2D);
-        glEnable(GL_COLOR_MATERIAL); 
-        glColor3f(1.0f, 0.55f, 0.0f);
+        glEnable(GL_COLOR_MATERIAL);
     }
 
     if (g_mesh && g_mesh->interleaved_data) {
@@ -250,16 +251,30 @@ void display() {
             float* ptr = g_mesh->interleaved_data + (i * data_per_vertex);
 
             glNormal3f(ptr[3], ptr[4], ptr[5]);
-
-            if (g_texture_id != 0) {
-                glTexCoord2f(ptr[6], ptr[7]);
-            }
             
+            if (use_texture) {
+                glTexCoord2f(ptr[6], ptr[7]);
+            } else {
+  
+                float y_val = ptr[1];
+
+                float y_norm = (y_val + 1.0f) / 2.0f; 
+
+                float Top_R = 0.3f, Top_G = 0.7f, Top_B = 0.8f;
+                float Bottom_R = 0.2f, Bottom_G = 0.15f, Bottom_B = 0.1f;
+
+                float R = Bottom_R * (1.0f - y_norm) + Top_R * y_norm;
+                float G = Bottom_G * (1.0f - y_norm) + Top_G * y_norm;
+                float B = Bottom_B * (1.0f - y_norm) + Top_B * y_norm;
+
+                glColor3f(R, G, B);
+            }
+
             glVertex3f(ptr[0], ptr[1], ptr[2]);
         }
         glEnd();
         
-        if (g_texture_id != 0) {
+        if (use_texture) {
             glDisable(GL_TEXTURE_2D);
             glEnable(GL_COLOR_MATERIAL); 
         }

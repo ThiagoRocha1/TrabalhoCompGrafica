@@ -156,6 +156,8 @@ Mesh* load_obj(const char* filename) {
         } else { ptr[6] = ptr[7] = 0.0f; }
     }
 
+    final_mesh->has_texcoords = (final_mesh->num_texcoords > 0);
+
     free(render_indices); 
     
     free(final_mesh->vertices);

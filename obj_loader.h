@@ -22,6 +22,7 @@ typedef struct {
     int num_vertices;
     int num_texcoords;
     int num_normals;
+    int has_texcoords;
 
     float* interleaved_data; 
     int num_render_vertices; 
