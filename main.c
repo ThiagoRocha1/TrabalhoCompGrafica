@@ -1,10 +1,15 @@
-#include <GL/glut.h> 
+#include "obj_loader.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
-#include <string.h> 
-#include "obj_loader.h" 
 
+#include <GL/glut.h> 
+#include <SOIL/SOIL.h> 
+
+#define MAX_LINE_LENGTH 1024
+
+GLuint g_texture_id = 0; 
 Mesh* g_mesh = NULL;
 int win_width, win_height; 
 
@@ -59,10 +64,10 @@ static void quat_to_matrix(float q[4], float m[16]) {
     float yw = q[1] * q[3];
     float zw = q[2] * q[3];
 
-    m[0] = 1.0f - 2.0f * (y2 + z2); m[4] = 2.0f * (xy - zw);        m[8] = 2.0f * (xz + yw);        m[12] = 0.0f;
-    m[1] = 2.0f * (xy + zw);        m[5] = 1.0f - 2.0f * (x2 + z2); m[9] = 2.0f * (yz - xw);        m[13] = 0.0f;
-    m[2] = 2.0f * (xz - yw);        m[6] = 2.0f * (yz + xw);        m[10] = 1.0f - 2.0f * (x2 + y2); m[14] = 0.0f;
-    m[3] = 0.0f;                    m[7] = 0.0f;                    m[11] = 0.0f;                   m[15] = 1.0f;
+    m[0] = 1.0f - 2.0f * (y2 + z2); m[4] = 2.0f * (xy - zw); m[8] = 2.0f * (xz + yw); m[12] = 0.0f;
+    m[1] = 2.0f * (xy + zw); m[5] = 1.0f - 2.0f * (x2 + z2); m[9] = 2.0f * (yz - xw); m[13] = 0.0f;
+    m[2] = 2.0f * (xz - yw); m[6] = 2.0f * (yz + xw); m[10] = 1.0f - 2.0f * (x2 + y2); m[14] = 0.0f;
+    m[3] = 0.0f; m[7] = 0.0f; m[11] = 0.0f;  m[15] = 1.0f;
 }
 
 void mouse_click(int button, int state, int x, int y) {
@@ -135,6 +140,9 @@ void cleanup() {
         free_mesh(g_mesh);
         g_mesh = NULL;
     }
+    if (g_texture_id != 0) {
+        glDeleteTextures(1, &g_texture_id);
+    }
 }
 
 void init(const char* obj_filename) {
@@ -147,10 +155,10 @@ void init(const char* obj_filename) {
 
     glClearColor(0.45f, 0.50f, 0.55f, 1.0f);
     
-    glEnable(GL_DEPTH_TEST);              
-    glEnable(GL_LIGHTING);                
-    glEnable(GL_LIGHT0);                  
-    glEnable(GL_COLOR_MATERIAL);          
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
 
     GLfloat light_position[] = {10.0f, 10.0f, 10.0f, 0.0f}; 
     GLfloat ambient_light[] = {0.2f, 0.2f, 0.2f, 1.0f};
@@ -159,6 +167,27 @@ void init(const char* obj_filename) {
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambient_light);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse_light);
+    
+    char texture_filename[] = "Onyx011_1K-JPG_Color.jpg"; 
+    
+    g_texture_id = SOIL_load_OGL_texture(
+        texture_filename,
+        SOIL_LOAD_AUTO,
+        SOIL_CREATE_NEW_ID,
+        SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
+    );
+    
+    if (g_texture_id == 0) {
+        fprintf(stderr, "AVISO: Falha ao carregar a textura %s. O modelo será renderizado com cor sólida.\n", texture_filename);
+    } else {
+        printf("Textura carregada com ID: %u\n", g_texture_id);
+        
+        glBindTexture(GL_TEXTURE_2D, g_texture_id);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); 
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
 }
 
 void display() {
@@ -201,6 +230,17 @@ void display() {
     }
     
     glScalef(scale_factor,scale_factor, scale_factor); 
+    
+    if (g_texture_id != 0) {
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, g_texture_id);
+        glDisable(GL_COLOR_MATERIAL); 
+        glColor3f(1.0f, 1.0f, 1.0f);
+    } else {
+        glDisable(GL_TEXTURE_2D);
+        glEnable(GL_COLOR_MATERIAL); 
+        glColor3f(1.0f, 0.55f, 0.0f);
+    }
 
     if (g_mesh && g_mesh->interleaved_data) {
         int data_per_vertex = 8; 
@@ -211,11 +251,18 @@ void display() {
 
             glNormal3f(ptr[3], ptr[4], ptr[5]);
 
-            glColor3f(1.0f, 0.55f, 0.0f);
-
+            if (g_texture_id != 0) {
+                glTexCoord2f(ptr[6], ptr[7]);
+            }
+            
             glVertex3f(ptr[0], ptr[1], ptr[2]);
         }
         glEnd();
+        
+        if (g_texture_id != 0) {
+            glDisable(GL_TEXTURE_2D);
+            glEnable(GL_COLOR_MATERIAL); 
+        }
     }
 
     glutSwapBuffers(); 
